@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>容疑者ファイル — 摩多羅 永花</title>
+
+<!-- ===== 외부 폰트 (한국어/일본어 모두 정갈하게 표시) ===== -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;600;700&family=Noto+Serif+JP:wght@400;500;600;700&family=Shippori+Mincho+B1:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+
+<!-- ===== 공무원증 이미지 저장용 라이브러리 ===== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<style>
+/* =====================================================================
+   COLOR TOKENS
+   메인: 흰색 + 검은색 + dark red(소량) + warm grey(질감)
+   ===================================================================== */
+:root{
+  --paper:    #ECE6DB;   /* 따뜻한 종이 */
+  --paper-hi: #F4EFE6;   /* 종이 하이라이트 */
+  --ink:      #17130F;   /* 잉크(검정) */
+  --ink-soft: #443c33;   /* 옅은 잉크 */
+  --grey:     #9b9387;   /* warm grey */
+  --grey-d:   #6f685d;   /* warm grey 진하게 */
+  --folder:   #c8b896;   /* 크라프트 파일 */
+  --folder-d: #b09e78;
+  --blood:    #6e1416;   /* dark red (봉인/도장 전용, 소량) */
+  --blood-br: #8a1c1f;
+  --line:     rgba(23,19,15,.16);
+  /* 공무원증 전용: 흰색 + 푸른색 */
+  --navy:     #173a6b;
+  --navy-d:   #0f2950;
+  --blue-tint:#eef3fb;
+
+  --serif-jp: "Shippori Mincho B1","Noto Serif JP","Noto Serif KR",serif;
+  --serif:    "Noto Serif KR","Noto Serif JP",serif;
+  --gothic:   "Noto Sans JP","Noto Sans KR",sans-serif;
+}
+
+*{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body{ margin:0; padding:0; height:100%; }
+body{
+  font-family:var(--serif);
+  color:var(--ink);
+  background:
+    radial-gradient(120% 80% at 50% 0%, #2b2724 0%, #1a1714 60%, #110f0d 100%);
+  display:flex; align-items:center; justify-content:center;
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* 폰 프레임 (PC에서도 모바일 비율로 보이게) */
+.stage{
+  position:relative;
+  width:100%; max-width:430px;
+  height:100dvh; max-height:932px;
+  background:var(--paper);
+  overflow:hidden;
+  box-shadow:0 30px 80px rgba(0,0,0,.55), 0 0 0 1px rgba(0,0,0,.4);
+}
+@supports not (height:100dvh){ .stage{ height:100vh; } }
+
+/* 종이 질감 (warm grey 노이즈) — 모든 장면 공통 바탕 */
+.paper-tex{
+  position:absolute; inset:0; pointer-events:none; z-index:0;
+  background-image:
+    radial-gradient(rgba(155,147,135,.10) 1px, transparent 1px),
+    radial-gradient(rgba(111,104,93,.06) 1px, transparent 1px);
+  background-size:4px 4px, 7px 7px;
+  background-position:0 0, 2px 3px;
+  mix-blend-mode:multiply;
+}
+
+/* =====================================================================
+   SCENE SYSTEM
+   ===================================================================== */
+.scene{ position:absolute; inset:0; z-index:1; display:none; flex-direction:column; }
+.scene.active{ display:flex; }
+
+/* =====================================================================
+   [1] 메인 — 용의자 파일 (닫힘/열림)
+   ===================================================================== */
+#scene-main{ background:var(--paper); }
+
+/* --- 닫힌 파일 --- */
+.cover{
+  position:absolute; inset:0; z-index:3;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:34px; padding:40px;
+  background:
+    linear-gradient(180deg,#2a2622,#171411);
+  transition:opacity .7s ease, transform .7s ease, visibility .7s;
+}
+.stage.opened .cover{ opacity:0; visibility:hidden; transform:scale(1.04); }
+
+.folder{
+  position:relative; width:74%; max-width:280px; aspect-ratio:3/4;
+  cursor:pointer; transition:transform .4s ease;
+  filter:drop-shadow(0 24px 40px rgba(0,0,0,.55));
+}
+.folder:active{ transform:translateY(-4px) rotate(-.4deg); }
+/* 파일 표지 */
+.folder-body{
+  position:absolute; inset:0;
+  background:
+    linear-gradient(135deg,var(--folder) 0%,var(--folder-d) 100%);
+  border-radius:4px 10px 4px 4px;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.12), inset 0 2px 0 rgba(255,255,255,.18);
+}
+.folder-body::after{ /* 결 질감 */
+  content:""; position:absolute; inset:0; border-radius:inherit;
+  background-image:repeating-linear-gradient(91deg,rgba(0,0,0,.04) 0 1px,transparent 1px 3px);
+  opacity:.5;
+}
+/* 안에서 살짝 삐져나온 종이 */
+.folder-paper{
+  position:absolute; top:14px; right:10px; left:18px; bottom:26px;
+  background:var(--paper-hi); border-radius:2px;
+  box-shadow:0 2px 6px rgba(0,0,0,.2);
+  transform:rotate(-1.2deg);
+}
+.folder-paper::before{
+  content:""; position:absolute; left:14px; right:14px; top:22px; height:1px;
+  background:var(--line);
+  box-shadow:0 9px 0 var(--line),0 18px 0 var(--line),0 27px 0 var(--line);
+}
+/* 라벨 탭 */
+.folder-tab{
+  position:absolute; top:-2px; left:24px; padding:7px 16px 9px;
+  background:var(--paper-hi); color:var(--ink);
+  font-family:var(--serif-jp); font-weight:600; letter-spacing:.14em; font-size:13px;
+  border-radius:2px 2px 0 0; box-shadow:0 -2px 6px rgba(0,0,0,.15);
+}
+/* 봉인용 빨간 끈 + 도장 */
+.seal{
+  position:absolute; bottom:18%; left:50%; transform:translateX(-50%);
+  width:62px; height:62px; border-radius:50%;
+  background:radial-gradient(circle at 38% 34%,var(--blood-br),var(--blood) 70%);
+  color:#f3e7d8; display:grid; place-items:center;
+  font-family:var(--serif-jp); font-weight:700; font-size:20px; letter-spacing:.04em;
+  box-shadow:0 4px 12px rgba(0,0,0,.4), inset 0 0 0 2px rgba(243,231,216,.35);
+}
+.seal::before,.seal::after{ /* 봉인 끈 */
+  content:""; position:absolute; top:50%; width:120px; height:3px;
+  background:linear-gradient(90deg,transparent,var(--blood),transparent);
+}
+.seal::before{ right:46px; }
+.seal::after{ left:46px; }
+
+.cover-title{ text-align:center; color:var(--paper); }
+.cover-title .ja{ font-family:var(--serif-jp); font-size:13px; letter-spacing:.5em; color:var(--grey); }
+.cover-title .ko{ font-family:var(--serif); font-size:26px; font-weight:600; letter-spacing:.3em; margin-top:10px; }
+.cover-hint{
+  font-family:var(--gothic); font-size:12px; letter-spacing:.28em; color:var(--grey);
+  animation:breathe 2.6s ease-in-out infinite;
+}
+@keyframes breathe{ 0%,100%{opacity:.35} 50%{opacity:.9} }
+
+/* --- 열린 문서 --- */
+.doc-wrap{
+  position:relative; z-index:2; height:100%; display:flex; flex-direction:column;
+  opacity:0; transform:translateY(24px);
+  transition:opacity .8s .25s ease, transform .8s .25s ease;
+}
+.stage.opened .doc-wrap{ opacity:1; transform:none; }
+
+.doc-top{
+  flex:0 0 auto; padding:20px 22px 14px;
+  border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,var(--paper-hi),var(--paper));
+}
+.doc-eyebrow{ font-family:var(--gothic); font-size:10.5px; letter-spacing:.42em; color:var(--grey-d); }
+.doc-eyebrow .red{ color:var(--blood); font-weight:700; }
+.doc-title{ font-family:var(--serif-jp); font-size:21px; font-weight:600; letter-spacing:.16em; margin-top:8px; }
+.doc-fileno{ font-family:var(--gothic); font-size:11px; color:var(--grey-d); letter-spacing:.16em; margin-top:6px; }
+
+/* 스크롤 본문 */
+.doc-scroll{ flex:1 1 auto; overflow-y:auto; padding:18px 22px 26px; -webkit-overflow-scrolling:touch; }
+
+/* 상단: 증명사진 + 이름 */
+.id-head{ display:flex; gap:16px; align-items:flex-start; margin-bottom:18px; }
+.id-photo{
+  flex:0 0 96px; width:96px; height:124px;
+  background:
+    repeating-linear-gradient(135deg,rgba(155,147,135,.18) 0 6px,rgba(155,147,135,.05) 6px 12px),
+    var(--paper-hi);
+  border:1px solid var(--line); position:relative;
+  display:grid; place-items:center; text-align:center;
+  box-shadow:0 3px 8px rgba(0,0,0,.12);
+}
+/* === 이미지 자리 (GitHub 업로드 예정): 아래 주석을 참고해 <img>로 교체 ===
+   <img class="id-photo-img" src="https://raw.githubusercontent.com/<user>/<repo>/main/suspect_photo.jpg" alt="증명사진">
+*/
+.id-photo .ph{ font-family:var(--gothic); font-size:9.5px; line-height:1.6; color:var(--grey-d); letter-spacing:.08em; }
+.id-photo .corner{ position:absolute; width:10px; height:10px; border:1px solid var(--grey-d); }
+.id-photo .c1{ top:5px; left:5px; border-right:0; border-bottom:0; }
+.id-photo .c2{ top:5px; right:5px; border-left:0; border-bottom:0; }
+.id-photo .c3{ bottom:5px; left:5px; border-right:0; border-top:0; }
+.id-photo .c4{ bottom:5px; right:5px; border-left:0; border-top:0; }
+
+.id-name{ padding-top:4px; }
+.id-name .label{ font-family:var(--gothic); font-size:10px; letter-spacing:.3em; color:var(--grey-d); }
+.id-name .ko{ font-family:var(--serif-jp); font-size:23px; font-weight:600; letter-spacing:.12em; margin-top:4px; }
+.id-name .ja{ font-family:var(--serif-jp); font-size:14px; color:var(--ink-soft); letter-spacing:.18em; margin-top:3px; }
+.id-name .stamp{
+  display:inline-block; margin-top:12px; padding:3px 10px;
+  border:1.5px solid var(--blood); color:var(--blood); border-radius:3px;
+  font-family:var(--gothic); font-size:10px; font-weight:700; letter-spacing:.22em;
+  transform:rotate(-3deg); opacity:.9;
+}
+
+/* 표 형식 문서 */
+.doc-table{ border-top:1px solid var(--line); }
+.doc-row{ display:flex; border-bottom:1px solid var(--line); }
+.doc-row .key{
+  flex:0 0 96px; padding:11px 10px; background:rgba(155,147,135,.10);
+  font-family:var(--gothic); font-size:11px; letter-spacing:.14em; color:var(--grey-d);
+  border-right:1px solid var(--line); display:flex; align-items:center;
+}
+.doc-row .val{ flex:1; padding:11px 12px; font-size:13.5px; line-height:1.7; color:var(--ink-soft); }
+
+.doc-note{
+  margin-top:18px; padding:14px 14px; border:1px dashed var(--line);
+  font-size:12.5px; line-height:1.85; color:var(--grey-d); background:rgba(244,239,230,.5);
+}
+.doc-note .h{ font-family:var(--gothic); font-size:10px; letter-spacing:.3em; color:var(--blood); margin-bottom:6px; }
+
+/* 잠입 버튼 (도장 누르듯) */
+.intrude-wrap{ margin-top:30px; display:flex; justify-content:center; padding-bottom:10px; }
+.btn-intrude{
+  position:relative; appearance:none; border:none; cursor:pointer;
+  width:118px; height:118px; border-radius:50%;
+  background:radial-gradient(circle at 38% 34%,var(--blood-br),var(--blood) 72%);
+  color:#f1e6d6; font-family:var(--serif-jp); font-weight:700; font-size:30px; letter-spacing:.1em;
+  box-shadow:0 8px 22px rgba(110,20,22,.5), inset 0 0 0 3px rgba(241,230,214,.4);
+  transition:transform .12s ease, box-shadow .12s ease;
+}
+.btn-intrude span.sub{ display:block; font-family:var(--gothic); font-weight:700; font-size:10px; letter-spacing:.3em; margin-top:4px; opacity:.85; }
+.btn-intrude:active{ transform:translateY(4px) scale(.97); box-shadow:0 3px 10px rgba(110,20,22,.5), inset 0 0 0 3px rgba(241,230,214,.4); }
+
+/* =====================================================================
+   [2] 쇼트 애니메이션 (이미지 6컷 × 3초)
+   ===================================================================== */
+#scene-anim{ background:#0d0b09; }
+.anim-stack{ position:absolute; inset:0; }
+.anim-frame{
+  position:absolute; inset:0; opacity:0; transition:opacity 1s ease;
+  display:grid; place-items:center;
+  /* === 이미지 자리 (GitHub 업로드 예정) ===
+     각 .anim-frame 의 background 를 아래처럼 교체하세요:
+     style="background:#000 url('https://raw.githubusercontent.com/<user>/<repo>/main/cut1.jpg') center/cover no-repeat;"
+  */
+  background:
+    radial-gradient(120% 90% at 50% 30%,#26211b,#0d0b09 75%);
+}
+.anim-frame::after{ /* 가독성용 어둠 */
+  content:""; position:absolute; inset:0; background:linear-gradient(180deg,rgba(0,0,0,.25),rgba(0,0,0,.55));
+}
+.anim-frame.show{ opacity:1; }
+.anim-placeholder{ position:relative; z-index:1; font-family:var(--gothic); font-size:11px; letter-spacing:.3em; color:rgba(155,147,135,.55); }
+
+/* 반투명 텍스트 박스 (가운데) */
+.anim-text{
+  position:absolute; z-index:3; left:24px; right:24px; bottom:14%;
+  background:rgba(17,14,11,.52); backdrop-filter:blur(3px);
+  border:1px solid rgba(236,230,219,.22); border-left:3px solid var(--blood);
+  padding:22px 22px; color:var(--paper);
+  font-family:var(--serif); font-size:16px; line-height:1.9; letter-spacing:.04em;
+  box-shadow:0 12px 30px rgba(0,0,0,.5);
+  opacity:0; transform:translateY(10px); transition:opacity .6s, transform .6s;
+}
+.anim-text.show{ opacity:1; transform:none; }
+
+.anim-progress{ position:absolute; z-index:3; top:18px; left:24px; right:24px; display:flex; gap:6px; }
+.anim-progress i{ flex:1; height:2px; background:rgba(236,230,219,.2); border-radius:2px; overflow:hidden; }
+.anim-progress i b{ display:block; height:100%; width:0; background:var(--paper); }
+.anim-progress i.done b{ width:100%; }
+.anim-progress i.run b{ animation:fill 3s linear forwards; }
+@keyframes fill{ from{width:0} to{width:100%} }
+
+.anim-tap-hint{
+  position:absolute; z-index:3; top:34px; right:24px;
+  font-family:var(--gothic); font-size:10px; letter-spacing:.24em; color:rgba(236,230,219,.45);
+}
+
+/* 스킵 확인 모달 */
+.modal{
+  position:absolute; inset:0; z-index:20; display:none; place-items:center;
+  background:rgba(13,11,9,.6); backdrop-filter:blur(2px); padding:30px;
+}
+.modal.show{ display:grid; }
+.modal-card{
+  width:100%; max-width:300px; background:var(--paper-hi); color:var(--ink);
+  border:1px solid var(--line); padding:26px 24px; text-align:center;
+  box-shadow:0 20px 50px rgba(0,0,0,.5);
+}
+.modal-card .q{ font-family:var(--serif-jp); font-size:17px; font-weight:600; letter-spacing:.06em; }
+.modal-card .sub{ font-family:var(--gothic); font-size:11px; color:var(--grey-d); margin-top:8px; letter-spacing:.1em; }
+.modal-actions{ display:flex; gap:10px; margin-top:22px; }
+.modal-actions button{
+  flex:1; appearance:none; cursor:pointer; padding:11px 0; font-family:var(--gothic); font-size:13px; letter-spacing:.1em;
+  border:1px solid var(--ink); background:transparent; color:var(--ink); border-radius:2px;
+}
+.modal-actions button.primary{ background:var(--blood); border-color:var(--blood); color:#f1e6d6; }
+
+/* =====================================================================
+   [3] 캐릭터 소개 / 상호작용 (출석부 테마)
+   ===================================================================== */
+#scene-chars{ background:var(--paper); }
+.roster-top{
+  flex:0 0 auto; padding:16px 18px 0; background:linear-gradient(180deg,var(--paper-hi),var(--paper));
+  border-bottom:1px solid var(--line);
+}
+.roster-top .head{ display:flex; align-items:baseline; justify-content:space-between; }
+.roster-top .ja{ font-family:var(--serif-jp); font-size:18px; font-weight:600; letter-spacing:.2em; }
+.roster-top .ko{ font-family:var(--gothic); font-size:10px; letter-spacing:.3em; color:var(--grey-d); }
+/* 탭 인덱스 (상단) */
+.tabs{ display:flex; gap:0; margin-top:14px; }
+.tab{
+  flex:1; appearance:none; cursor:pointer; background:transparent; border:none;
+  padding:12px 0 13px; font-family:var(--gothic); font-size:12.5px; letter-spacing:.14em; color:var(--grey-d);
+  position:relative;
+}
+.tab .min{ display:block; font-size:9px; letter-spacing:.3em; margin-top:3px; opacity:.7; }
+.tab.active{ color:var(--ink); }
+.tab.active::after{ content:""; position:absolute; left:18%; right:18%; bottom:-1px; height:2px; background:var(--blood); }
+
+.panel{ flex:1 1 auto; overflow-y:auto; display:none; -webkit-overflow-scrolling:touch; }
+.panel.active{ display:block; }
+
+/* --- 패널 A: 캐릭터 프로필 --- */
+#panel-profile{ position:relative; }
+.profile-grid{ display:flex; height:100%; min-height:0; }
+/* 왼쪽 스탠딩 */
+.standing-col{
+  flex:0 0 46%; position:relative; background:
+    linear-gradient(180deg,#efe9de,#e4ddd0);
+  border-right:1px solid var(--line); overflow:hidden;
+}
+.standing-col .rule{ position:absolute; left:0; right:0; top:0; bottom:0;
+  background-image:repeating-linear-gradient(180deg,transparent 0 27px,var(--line) 27px 28px);
+  opacity:.5; }
+.standing{
+  position:absolute; left:50%; bottom:0; transform:translateX(-50%);
+  width:150%; height:96%; cursor:pointer;
+  perspective:1200px;
+}
+.standing-inner{ position:relative; width:100%; height:100%; transform-style:preserve-3d; transition:transform .8s cubic-bezier(.4,.1,.2,1); }
+.standing.flipped .standing-inner{ transform:rotateY(180deg); }
+.standing-face{
+  position:absolute; inset:0; backface-visibility:hidden;
+  display:grid; place-items:center; text-align:center;
+  /* === 이미지 자리 (GitHub 업로드 예정) ===
+     기본 의상:  .face-front 의 background 를 아래처럼 교체
+       style="background:url('https://raw.githubusercontent.com/<user>/<repo>/main/standing_a.png') center bottom/contain no-repeat;"
+     다른 의상:  .face-back 도 동일하게 standing_b.png 로 교체
+  */
+}
+.face-front{ background:radial-gradient(80% 60% at 50% 40%,rgba(155,147,135,.18),transparent); }
+.face-back{ transform:rotateY(180deg); background:radial-gradient(80% 60% at 50% 40%,rgba(110,20,22,.10),transparent); }
+.standing-face .ph{ font-family:var(--gothic); font-size:10px; letter-spacing:.22em; color:var(--grey-d); line-height:1.8; }
+.flip-hint{
+  position:absolute; z-index:2; bottom:10px; left:0; right:0; text-align:center;
+  font-family:var(--gothic); font-size:9.5px; letter-spacing:.2em; color:var(--grey-d);
+  pointer-events:none; animation:breathe 2.6s ease-in-out infinite;
+}
+
+/* 오른쪽 정보 */
+.info-col{ flex:1; padding:22px 18px; }
+.info-col .num{ font-family:var(--gothic); font-size:10px; letter-spacing:.32em; color:var(--blood); }
+.info-col .nm-ko{ font-family:var(--serif-jp); font-size:24px; font-weight:600; letter-spacing:.1em; margin-top:6px; }
+.info-col .nm-ja{ font-family:var(--serif-jp); font-size:13px; color:var(--ink-soft); letter-spacing:.16em; margin-top:3px; }
+.info-col .meta{ margin-top:18px; }
+.info-col .meta .r{ display:flex; border-bottom:1px solid var(--line); padding:9px 0; }
+.info-col .meta .r .k{ flex:0 0 64px; font-family:var(--gothic); font-size:10.5px; letter-spacing:.12em; color:var(--grey-d); }
+.info-col .meta .r .v{ flex:1; font-size:13px; color:var(--ink-soft); line-height:1.6; }
+.quote{
+  margin-top:20px; padding:14px 14px 14px 16px; border-left:3px solid var(--blood);
+  background:rgba(155,147,135,.10); font-family:var(--serif); font-size:14px; line-height:1.85; color:var(--ink);
+}
+.quote .q{ font-style:italic; }
+
+/* --- 패널 B: 경찰공무원증 메이커 (창작물 · 흰색+푸른색) --- */
+#panel-id{ background:#fff; }
+.idmaker{ padding:20px 18px 36px; }
+.idmaker .lead{ font-family:var(--gothic); font-size:11px; letter-spacing:.14em; color:var(--navy); line-height:1.7; }
+.idmaker .lead b{ color:var(--blood); }
+
+/* 카드 (캡쳐 대상) */
+.idcard{
+  position:relative; margin:18px auto 0; width:300px; max-width:100%;
+  background:#fff; color:var(--navy-d); border:1px solid #d3ddec;
+  box-shadow:0 8px 22px rgba(23,58,107,.14); overflow:hidden;
+}
+.idcard-head{
+  background:linear-gradient(135deg,var(--navy),var(--navy-d)); color:#fff;
+  padding:12px 16px; display:flex; align-items:center; justify-content:space-between;
+}
+.idcard-head .t{ font-family:var(--gothic); font-weight:700; font-size:13px; letter-spacing:.12em; }
+.idcard-head .t small{ display:block; font-weight:400; font-size:9px; letter-spacing:.2em; opacity:.85; margin-top:2px; }
+.idcard-head .emblem{ width:30px; height:30px; border-radius:50%; border:2px solid rgba(255,255,255,.7);
+  display:grid; place-items:center; font-family:var(--serif-jp); font-size:13px; }
+.idcard-body{ display:flex; gap:14px; padding:16px; position:relative; }
+.idcard-photo{
+  flex:0 0 84px; width:84px; height:104px; background:var(--blue-tint);
+  border:1px solid #cdd9ec; overflow:hidden; display:grid; place-items:center; position:relative;
+}
+.idcard-photo img{ width:100%; height:100%; object-fit:cover; display:none; }
+.idcard-photo .ph{ font-family:var(--gothic); font-size:9px; letter-spacing:.1em; color:#8aa0c2; text-align:center; line-height:1.5; padding:0 6px; }
+.idcard-fields{ flex:1; }
+.idcard-fields .f{ margin-bottom:9px; }
+.idcard-fields .f .lab{ font-family:var(--gothic); font-size:8.5px; letter-spacing:.18em; color:#7e93b3; }
+.idcard-fields .f .nm{ font-family:var(--gothic); font-weight:700; font-size:18px; color:var(--navy-d); min-height:22px; }
+.idcard-fields .f .ja{ font-family:var(--serif-jp); font-size:12px; color:#3f5a86; min-height:16px; }
+.idcard-fields .f .no{ font-family:var(--gothic); font-size:11px; color:#6c84a8; letter-spacing:.08em; }
+.idcard-foot{
+  border-top:1px solid #e2e9f3; padding:9px 16px; display:flex; align-items:center; justify-content:space-between;
+  background:var(--blue-tint);
+}
+.idcard-foot .org{ font-family:var(--serif-jp); font-weight:600; font-size:13px; color:var(--navy-d); letter-spacing:.08em; }
+.idcard-foot .org small{ display:block; font-family:var(--gothic); font-weight:400; font-size:8px; color:#7e93b3; letter-spacing:.18em; margin-top:2px; }
+/* 창작물 표시 — 누가 봐도 창작물임을 명시 */
+.idcard-watermark{
+  position:absolute; inset:0; pointer-events:none; display:grid; place-items:center; z-index:2;
+}
+.idcard-watermark span{
+  font-family:var(--gothic); font-weight:700; font-size:20px; letter-spacing:.5em;
+  color:rgba(110,20,22,.10); transform:rotate(-18deg); white-space:nowrap;
+}
+.idcard-fiction{
+  background:#fff; border-top:1px dashed #cdd9ec; padding:7px 16px;
+  font-family:var(--gothic); font-size:8.5px; letter-spacing:.06em; color:#9aa9bf; text-align:center; line-height:1.5;
+}
+
+/* 입력 컨트롤 */
+.id-controls{ margin-top:22px; }
+.id-controls .field{ margin-bottom:14px; }
+.id-controls label{ display:block; font-family:var(--gothic); font-size:11px; letter-spacing:.1em; color:var(--navy); margin-bottom:6px; }
+.id-controls input[type=text]{
+  width:100%; padding:11px 12px; font-family:var(--gothic); font-size:14px; color:var(--navy-d);
+  border:1px solid #cdd9ec; border-radius:4px; background:#fbfdff;
+}
+.id-controls input[type=text]:focus{ outline:none; border-color:var(--navy); }
+.file-btn{
+  display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+  padding:10px 14px; border:1px solid var(--navy); border-radius:4px; background:#fff;
+  font-family:var(--gothic); font-size:12px; letter-spacing:.06em; color:var(--navy);
+}
+.file-btn input{ display:none; }
+.id-save{
+  width:100%; margin-top:8px; appearance:none; cursor:pointer; padding:14px 0; border:none; border-radius:4px;
+  background:var(--navy); color:#fff; font-family:var(--gothic); font-weight:700; font-size:14px; letter-spacing:.12em;
+}
+.id-save:active{ background:var(--navy-d); }
+.id-disclaimer{ margin-top:14px; font-family:var(--gothic); font-size:10px; line-height:1.7; color:#94a3b8; letter-spacing:.04em; }
+
+/* 스크롤바 */
+.doc-scroll::-webkit-scrollbar,.panel::-webkit-scrollbar{ width:6px; }
+.doc-scroll::-webkit-scrollbar-thumb,.panel::-webkit-scrollbar-thumb{ background:rgba(111,104,93,.3); border-radius:3px; }
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration:.001s !important; transition-duration:.1s !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- =====================================================================
+     데이터 (JSON) — 내용은 여기만 수정하면 화면에 반영됩니다.
+     ===================================================================== -->
+<script id="app-data" type="application/json">
+{
+  "suspect": {
+    "fileNo": "FILE No. 0408 / 機密",
+    "name_ko": "마타라 토와카",
+    "name_ja": "摩多羅 永花",
+    "rows": [
+      { "key": "年齢", "val": "18세" },
+      { "key": "性別", "val": "여성" },
+      { "key": "住所", "val": "오사카현 미나미카와치구 소속 노칸자읍" },
+      { "key": "職業", "val": "학생 (아카이미즈 고교 재학)" },
+      { "key": "経歴", "val": "노칸자읍 관광용 선박 청소 (2년)<br>세븐일레븐 노칸자점 야간 관리 (1년 2개월)" },
+      { "key": "特記", "val": "청소, 그 외 알려진 사항 없음" }
+    ],
+    "note": "뺑소니 및 우발살인 2건의 범행자 마타라 테츠야의 외동딸. 모친 부재. 아카이미즈 고교를 탐문 수사하였으나 추가로 테츠야에 대해 밝혀낸 정보가 없으므로, 오사카시 중앙경찰서의 ■■■ 팀원이 직접 교내로 잠입하여 수사할 것을 지시함."
+  },
+  "narration": [
+    "그 애는 살인자 애비 피를 그대로 갖고 있어. 어떻게 우리가 마음 편히 살 수 있겠어……",
+    "마타라 씨는 정말로 멋진 사람이지만, 그 분위기는… 분명 범죄의 냄새라고 생각해.",
+    "……마타라에 대한 교내의 처분은 합당하다.",
+    "순수하다고는 못 하겠지만 죄도 없는 아이야. 너무 관심 가지지 말도록 하렴.",
+    "— 그래서, 잠입 결과는?",
+    "친한 척하려고 들지 마."
+  ],
+  "character": {
+    "num": "出席番号 — 14",
+    "name_ko": "마타라 토와카",
+    "name_ja": "摩多羅 永花",
+    "rows": [
+      { "k": "성별", "v": "여성" },
+      { "k": "나이", "v": "18세" },
+      { "k": "소속", "v": "아카이미즈 고등학교(赤水高敎)" },
+      { "k": "알려진 정보", "v": "공공의 적. 그야, 교내에 무시무시한 범죄자의 자식이 아직도 숨 붙인 채 잔존한다는 것은 공해니까!" }
+    ],
+    "quote": "「―쨩 같은 거, 금세 죽여버릴 수 있는데도 참는 거야. 적당히 거리 벌리는 편이 좋아. 마지막 충고니까.」"
+  }
+}
+</script>
+
+<div class="stage" id="stage">
+  <div class="paper-tex"></div>
+
+  <!-- ============ [1] 메인 ============ -->
+  <section class="scene active" id="scene-main">
+
+    <!-- 닫힌 파일 -->
+    <div class="cover" id="cover">
+      <div class="cover-title">
+        <div class="ko">容疑者　資料</div>
+      </div>
+
+      <div class="folder" id="folder" role="button" aria-label="파일 열기">
+        <div class="folder-body"></div>
+        <div class="folder-paper"></div>
+        <div class="folder-tab">容疑者ファイル</div>
+        <div class="seal">封</div>
+      </div>
+
+      <div class="cover-hint">TAP TO OPEN</div>
+    </div>
+
+    <!-- 열린 문서 -->
+    <div class="doc-wrap">
+      <div class="doc-top">
+        <div class="doc-eyebrow">CONFIDENTIAL <span class="red">●</span> 取扱注意</div>
+        <div class="doc-title">容疑者調書</div>
+        <div class="doc-fileno" id="fileNo"></div>
+      </div>
+
+      <div class="doc-scroll">
+        <div class="id-head">
+          <div class="id-photo">
+            <!-- 증명사진 자리: 아래 ph div 대신 <img class="id-photo-img" src="GitHub URL"> 로 교체 -->
+            <span class="corner c1"></span><span class="corner c2"></span>
+            <span class="corner c3"></span><span class="corner c4"></span>
+            <img class="id-photo-img" src="https://raw.githubusercontent.com/yermigionic-web/anoko/refs/heads/main/id.png"  style="width: 100%; height: 100%; object-fit: contain;">
+          </div>
+          <div class="id-name">
+            <div class="label">容疑者</div>
+            <div class="ko" id="sName"></div>
+            <div class="ja" id="sNameJa"></div>
+            <span class="stamp">未　決</span>
+          </div>
+        </div>
+
+        <div class="doc-table" id="docTable"><!-- JSON에서 채움 --></div>
+
+        <div class="doc-note">
+          <div class="h">備考</div>
+          <span id="docNote"></span>
+        </div>
+
+        <div class="intrude-wrap">
+          <button class="btn-intrude" id="btnIntrude" aria-label="잠입">
+            潜入<span class="sub">잠 입</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ [2] 쇼트 애니메이션 ============ -->
+  <section class="scene" id="scene-anim">
+    <div class="anim-stack" id="animStack"><!-- 프레임 6개 JS 생성 --></div>
+    <div class="anim-progress" id="animProgress"></div>
+    <div class="anim-tap-hint">TAP TO SKIP</div>
+    <div class="anim-text" id="animText"></div>
+
+    <div class="modal" id="skipModal">
+      <div class="modal-card">
+        <div class="q">스킵하시겠습니까?</div>
+        <div class="sub">열람을 권장합니다.</div>
+        <div class="modal-actions">
+          <button id="skipNo">아니오</button>
+          <button class="primary" id="skipYes">예</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ [3] 캐릭터 소개 / 상호작용 ============ -->
+  <section class="scene" id="scene-chars">
+    <div class="roster-top">
+      <div class="head">
+        <div class="ja">出　席　簿</div>
+        <div class="ko">CLASS ROSTER</div>
+      </div>
+      <div class="tabs">
+        <button class="tab active" data-panel="panel-profile">프로필<span class="min">PROFILE</span></button>
+        <button class="tab" data-panel="panel-id">공무원증<span class="min">ID CARD</span></button>
+      </div>
+    </div>
+
+    <!-- 패널 A: 프로필 -->
+    <div class="panel active" id="panel-profile">
+      <div class="profile-grid">
+        <div class="standing-col">
+          <div class="rule"></div>
+          <div class="standing" id="standing" role="button" aria-label="스탠딩 회전">
+            <div class="standing-inner">
+              <div class="standing-face face-front">
+                  <img class="id-photo-img" src="https://raw.githubusercontent.com/yermigionic-web/anoko/refs/heads/main/towakastanding1.png"  style="width: 100%; height: 100%; object-fit: contain;">
+              </div>
+              <div class="standing-face face-back">
+                 <img class="id-photo-img" src="https://raw.githubusercontent.com/yermigionic-web/anoko/refs/heads/main/towakastanding2.png"  style="width: 100%; height: 100%; object-fit: contain;">
+              </div>
+            </div>
+          </div>
+          <div class="flip-hint">TAP ME!</div>
+        </div>
+
+        <div class="info-col">
+          <div class="num" id="cNum"></div>
+          <div class="nm-ko" id="cNameKo"></div>
+          <div class="nm-ja" id="cNameJa"></div>
+          <div class="meta" id="cMeta"></div>
+          <div class="quote"><span class="q" id="cQuote"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 패널 B: 경찰공무원증 메이커 -->
+    <div class="panel" id="panel-id">
+      <div class="idmaker">
+        <div class="lead">나만의 카드를 만들어 보세요. <b>본 카드는 창작물(소품)</b>이며 실제 증명서가 아닙니다.</div>
+
+        <!-- 캡쳐 대상 -->
+        <div class="idcard" id="idCard">
+          <div class="idcard-head">
+            <div class="t">警察職員証<small>POLICE STAFF ID · 創作物</small></div>
+            <div class="emblem">桜</div>
+          </div>
+          <div class="idcard-body">
+            <div class="idcard-photo">
+              <img id="idPhotoImg" alt="">
+              <span class="ph" id="idPhotoPh">PHOTO<br>사진 삽입</span>
+            </div>
+            <div class="idcard-fields">
+              <div class="f">
+                <div class="lab">氏名 / NAME</div>
+                <div class="nm" id="idNameOut">　</div>
+                <div class="ja" id="idNameJaOut">　</div>
+              </div>
+              <div class="f">
+                <div class="lab">職員番号 / No.</div>
+                <div class="no">№ 0000 — 0408</div>
+              </div>
+            </div>
+          </div>
+          <div class="idcard-foot">
+            <div class="org">大阪市中央警察署<small>OSAKA CENTRAL POLICE</small></div>
+          </div>
+          <div class="idcard-fiction">OFFICAL KARYL UNIVERSE</div>
+        </div>
+
+        <!-- 컨트롤 -->
+        <div class="id-controls">
+          <div class="field">
+            <label>사진 / 写真</label>
+            <label class="file-btn">📷 사진 선택<input type="file" id="idPhotoInput" accept="image/*"></label>
+          </div>
+          <div class="field">
+            <label>이름 / 名前</label>
+            <input type="text" id="idNameInput" placeholder="예: 홍길동" maxlength="14">
+          </div>
+          <div class="field">
+            <label>이름(일본어 표기) / 日本語表記</label>
+            <input type="text" id="idNameJaInput" placeholder="例: ホン・ギルドン" maxlength="20">
+          </div>
+          <button class="id-save" id="idSave">이미지로 저장</button>
+          <div class="id-disclaimer">
+            이 페이지에서 만든 이미지는 명백한 창작물입니다. 실제 신분증·공문서로 사용하거나 타인을 오인하게 하는 용도로 쓰지 마세요.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 배경음악 (페이지2부터 재생) -->
+  <audio id="bgm" loop preload="auto" src="https://github.com/yermigionic-web/anoko/raw/refs/heads/main/classmatebgm.mp3"></audio>
+</div>
+
+<script>
+/* =====================================================================
+   데이터 로드 & 렌더
+   ===================================================================== */
+const DATA = JSON.parse(document.getElementById('app-data').textContent);
+
+// [1] 메인 문서 채우기
+(function fillSuspect(){
+  const s = DATA.suspect;
+  document.getElementById('fileNo').textContent = s.fileNo;
+  document.getElementById('sName').textContent = s.name_ko;
+  document.getElementById('sNameJa').textContent = s.name_ja;
+  const t = document.getElementById('docTable');
+  t.innerHTML = s.rows.map(r =>
+    `<div class="doc-row"><div class="key">${r.key}</div><div class="val">${r.val}</div></div>`
+  ).join('');
+  document.getElementById('docNote').textContent = s.note;
+})();
+
+// [3] 캐릭터 프로필 채우기
+(function fillChar(){
+  const c = DATA.character;
+  document.getElementById('cNum').textContent = c.num;
+  document.getElementById('cNameKo').textContent = c.name_ko;
+  document.getElementById('cNameJa').textContent = c.name_ja;
+  document.getElementById('cMeta').innerHTML = c.rows.map(r =>
+    `<div class="r"><div class="k">${r.k}</div><div class="v">${r.v}</div></div>`
+  ).join('');
+  document.getElementById('cQuote').textContent = c.quote;
+})();
+
+/* =====================================================================
+   장면 전환
+   ===================================================================== */
+const stage = document.getElementById('stage');
+const bgm = document.getElementById('bgm');
+function goScene(id){
+  document.querySelectorAll('.scene').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+/* ----- [1] 파일 열기 ----- */
+document.getElementById('folder').addEventListener('click', () => {
+  stage.classList.add('opened');
+});
+
+/* ----- 잠입 → 애니메이션 + BGM ----- */
+document.getElementById('btnIntrude').addEventListener('click', () => {
+  goScene('scene-anim');
+  bgm.volume = 0.6;
+  bgm.play().catch(()=>{ /* 자동재생 차단 시 무시 */ });
+  startAnim();
+});
+
+/* =====================================================================
+   [2] 쇼트 애니메이션 (6컷 × 3초)
+   ===================================================================== */
+const FRAME_MS = 3000;
+const narration = DATA.narration;
+const stack = document.getElementById('animStack');
+const prog  = document.getElementById('animProgress');
+const animText = document.getElementById('animText');
+let animIndex = 0, animTimer = null, animStarted = false;
+
+// 프레임 & 진행바 생성
+// 1. 여기에 각 CUT(01, 02, 03...)에 들어갈 GitHub Raw 이미지 주소를 순서대로 넣어줘!
+const imageUrls = [
+  "https://raw.githubusercontent.com/yermigionic-web/anoko/refs/heads/main/anoko1.png", // CUT 01 이미지
+  "https://raw.githubusercontent.com/yermigionic-web/anoko/refs/heads/main/anoko2.png", // CUT 02 이미지
+  "https://raw.githubusercontent.com/yermigionic-web/anoko/refs/heads/main/anoko3.png", // CUT 03 이미지
+  "https://raw.githubusercontent.com/yermigionic-web/anoko/refs/heads/main/anoko4.png",
+  "https://raw.githubusercontent.com/yermigionic-web/anoko/refs/heads/main/anoko5.png",
+  "https://raw.githubusercontent.com/yermigionic-web/anoko/refs/heads/main/anoko6.png"
+  // 필요한 만큼 콤마(,)로 구분해서 계속 추가하면 돼
+];
+
+narration.forEach((_, i) => {
+  const f = document.createElement('div');
+  f.className = 'anim-frame';
+  
+  // 2. 이미지 배열에 해당 순서(i)의 주소가 존재하는지 확인
+  if (imageUrls[i]) {
+    // 이미지가 있다면 배경으로 깔아주기
+    f.style.background = `#000 url('${imageUrls[i]}') center/cover no-repeat`;
+    f.innerHTML = ''; // 글자 자리는 깔끔하게 비워둠
+  } else {
+    // 3. 만약 배열에 이미지를 덜 넣었다면, 기존처럼 글자로 표시 (안전장치)
+    f.innerHTML = `<span class="anim-placeholder">CUT ${String(i+1).padStart(2,'0')} — 이미지 자리</span>`;
+  }
+  
+  stack.appendChild(f);
+  const p = document.createElement('i'); p.innerHTML = '<b></b>'; prog.appendChild(p);
+});
+
+const frames = [...stack.children];
+const bars   = [...prog.children];
+
+function showFrame(i){
+  frames.forEach((f,k)=> f.classList.toggle('show', k===i));
+  bars.forEach((b,k)=>{
+    b.classList.remove('run','done');
+    if(k<i) b.classList.add('done');
+    else if(k===i) b.classList.add('run');
+  });
+  // 텍스트 페이드 리셋 → 표시
+  animText.classList.remove('show');
+  animText.textContent = narration[i];
+  // 강제 리플로우 후 표시
+  void animText.offsetWidth;
+  setTimeout(()=> animText.classList.add('show'), 60);
+}
+
+function startAnim(){
+  if(animStarted) return; animStarted = true;
+  animIndex = 0; showFrame(0);
+  animTimer = setInterval(nextFrame, FRAME_MS);
+}
+function nextFrame(){
+  animIndex++;
+  if(animIndex >= narration.length){ finishAnim(); return; }
+  showFrame(animIndex);
+}
+function finishAnim(){
+  clearInterval(animTimer); animTimer = null;
+  goScene('scene-chars');
+}
+
+/* 스킵 모달 */
+const skipModal = document.getElementById('skipModal');
+document.getElementById('animStack').addEventListener('click', openSkip);
+animText.addEventListener('click', openSkip);
+function openSkip(){
+  if(skipModal.classList.contains('show')) return;
+  clearInterval(animTimer);            // 진행 정지
+  skipModal.classList.add('show');
+}
+document.getElementById('skipYes').addEventListener('click', ()=>{
+  skipModal.classList.remove('show');
+  finishAnim();
+});
+document.getElementById('skipNo').addEventListener('click', ()=>{
+  skipModal.classList.remove('show');
+  // 현재 컷부터 이어서 진행
+  bars[animIndex] && bars[animIndex].classList.add('run'); // 진행바 재시작 표시
+  animTimer = setInterval(nextFrame, FRAME_MS);
+});
+
+/* =====================================================================
+   [3] 탭 전환
+   ===================================================================== */
+document.querySelectorAll('.tab').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(b=> b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=> p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.panel).classList.add('active');
+  });
+});
+
+/* 스탠딩 회전 (의상 전환) */
+document.getElementById('standing').addEventListener('click', function(){
+  this.classList.toggle('flipped');
+});
+
+/* =====================================================================
+   경찰공무원증 메이커
+   ===================================================================== */
+const idNameInput   = document.getElementById('idNameInput');
+const idNameJaInput = document.getElementById('idNameJaInput');
+const idNameOut     = document.getElementById('idNameOut');
+const idNameJaOut   = document.getElementById('idNameJaOut');
+const idPhotoInput  = document.getElementById('idPhotoInput');
+const idPhotoImg    = document.getElementById('idPhotoImg');
+const idPhotoPh     = document.getElementById('idPhotoPh');
+
+idNameInput.addEventListener('input', ()=> idNameOut.textContent = idNameInput.value || '　');
+idNameJaInput.addEventListener('input', ()=> idNameJaOut.textContent = idNameJaInput.value || '　');
+
+idPhotoInput.addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev=>{
+    idPhotoImg.src = ev.target.result;
+    idPhotoImg.style.display = 'block';
+    idPhotoPh.style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('idSave').addEventListener('click', ()=>{
+  const card = document.getElementById('idCard');
+  if(typeof html2canvas === 'undefined'){
+    alert('저장 기능을 불러오지 못했습니다. 네트워크 연결을 확인해 주세요.');
+    return;
+  }
+  html2canvas(card, { scale:3, backgroundColor:'#ffffff', useCORS:true }).then(canvas=>{
+    const link = document.createElement('a');
+    link.download = 'police_id_creative.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }).catch(()=> alert('이미지 저장에 실패했습니다. 다시 시도해 주세요.'));
+});
+</script>
+</body>
+</html>
